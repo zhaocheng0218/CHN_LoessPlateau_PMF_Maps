@@ -39,13 +39,19 @@ var classifier = ee.Classifier.smileRandomForest(100)
                     inputProperties:bandNames
                   });
 print(classifier.explain().get('outOfBagErrorEstimate'));
-
+////+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 
 ////+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-var esaCropland = ee.ImageCollection("ESA/WorldCover/v100").first().eq(40).rename("b1").clip(roi);
-var clcdCropland = ee.Image("users/my-work/WHU_CLCD/WHU_CLCD_LP_2020").eq(1).rename("b1").clip(roi);
-var cropland = ee.ImageCollection([esaCropland,clcdCropland]).max();
+////++ Overlap two land use/cover products to exclude no-PMF pixels.
+////++ Dataset 1: GLC-FCS30D (Zhang et al., 2024)
+////++ Dataset 2: CACD (Tu et al., 2024)
+////++ Dataset 3: CLCD (Huang et al., 2021)
+var cropland = ee.Image("users/my-work/LoessPlateau_PFM/GitHub_openAccess/cropland")
+Map.addLayer(cropland.selfMask().clip(roi),{palette:"#d774ff"},"cropland");
+////+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+
 
 ////+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 ////+++ prepare data.
@@ -106,7 +112,7 @@ var rgb = ee.ImageCollection("COPERNICUS/S2_SR_HARMONIZED")
               .map(maskS2clouds)
               .select(oldBands,newBands)
               .max().clip(roi);
-Map.addLayer(rgb,{bands:["red","green","blue"],min:500,max:3200},"rgb");
+Map.addLayer(rgb,{bands:["red","green","blue"],min:-100,max:2400},"rgb");
 Map.addLayer(pmf,{color:"red"},"pmf",false);
 Map.addLayer(nopmf,{color:"blue"},"nopmf",false);
 
@@ -284,7 +290,7 @@ var data = blue_coeffi.addBands(green_coeffi).addBands(red_coeffi).addBands(swir
 
 ////+++ Generate plastic-mulched farmland distribution maps for study area.
 var classified = data.clip(roi).updateMask(cropland).classify(classifier);
-Map.addLayer(classified.selfMask(),{min:0,max:1,palette:["green","yellow"]},"classified",false);
+Map.addLayer(classified.selfMask(),{min:0,max:1,palette:["green","yellow"]},"classified");
 Map.addLayer(cropland.eq(1).selfMask(),{palette:"red"},"cropland",false);
 
 
