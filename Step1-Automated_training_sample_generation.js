@@ -12,11 +12,10 @@ Map.addLayer(roi,{color:"red"},"roi",false);
 
 ////+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 ////++ Overlap two land use/cover products to exclude no-PMF pixels.
-////++ Dataset 1: ESA WorldCover v100 (Zanaga et al., 2022) 
-////++ Dataset 2: China Land Cover Dataset (CLCD, Yang and Huang 2021)
-var esaCropland = ee.ImageCollection("ESA/WorldCover/v100").first().eq(40).rename("b1").clip(roi);
-var clcdCropland = ee.Image("users/my-work/WHU_CLCD/WHU_CLCD_LP_2020").eq(1).rename("b1").clip(roi);
-var cropland = ee.ImageCollection([esaCropland,clcdCropland]).max();
+////++ Dataset 1: GLC-FCS30D (Zhang et al., 2024)
+////++ Dataset 2: CACD (Tu et al., 2024)
+////++ Dataset 3: CLCD (Huang et al., 2021)
+var cropland = ee.Image("users/my-work/LoessPlateau_PFM/GitHub_openAccess/cropland")
 Map.addLayer(cropland.selfMask().clip(roi),{palette:"#d774ff"},"cropland",false);
 ////+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
@@ -53,7 +52,7 @@ var img_max = s2Col.filter( ee.Filter.or(ee.Filter.date("2020-05-15","2020-05-20
                                          ee.Filter.date("2020-05-25","2020-05-30")) )
                   .max()
                   .set("system:time_start",timing_max);
-Map.addLayer(img_max,{bands:["red","green","blue"],min:0.05,max:0.33},"img_max",false);
+Map.addLayer(img_max,{bands:["red","green","blue"],min:0.017,max:0.241},"img_max",false);
 
 ////++ High-quality Sentinel-2 images during flourishing stage (FS)
 var timing_FS = ee.Date("2020-08-15").millis();
