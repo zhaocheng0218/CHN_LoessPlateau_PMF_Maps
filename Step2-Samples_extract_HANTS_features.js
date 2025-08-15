@@ -1,5 +1,5 @@
 /*****************************************************************************************************
- * This demo shows the process of using samples to extract HANTS features of Sentinel-2 time series.
+ * This demo shows the process of using samples to extract HANTS features of Sentinel-2 time series. 
 ******************************************************************************************************/
 
 var roi = ee.Geometry.Polygon(
