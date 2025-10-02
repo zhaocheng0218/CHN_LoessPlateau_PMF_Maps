@@ -9,6 +9,7 @@ var roi = ee.Geometry.Polygon(
           [108.90853412858729, 34.55181204743065],
           [108.90853412858729, 35.50316484800783]]], null, false);
 Map.addLayer(roi,{color:"red"},"roi",false);
+Map.centerObject(roi,12);
 
 ////+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 ////++ Overlap two land use/cover products to exclude no-PMF pixels.
@@ -52,7 +53,7 @@ var img_max = s2Col.filter( ee.Filter.or(ee.Filter.date("2020-05-15","2020-05-20
                                          ee.Filter.date("2020-05-25","2020-05-30")) )
                   .max()
                   .set("system:time_start",timing_max);
-Map.addLayer(img_max,{bands:["red","green","blue"],min:0.017,max:0.241},"img_max",false);
+Map.addLayer(img_max,{bands:["red","green","blue"],min:0.017,max:0.27},"img_max");
 
 ////++ High-quality Sentinel-2 images during flourishing stage (FS)
 var timing_FS = ee.Date("2020-08-15").millis();
@@ -63,11 +64,11 @@ Map.addLayer(img_FS,{bands:["red","green","blue"],min:0.05,max:0.4},"img_FS",fal
 ////+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 ////++ Calculating plastic-mulched farmland indices.
 ////+++ MBPMFI = img_max
-var MBPMFI = img_max.select("blue").updateMask(cropland).rename("blue_max");
+var MBPMFI = img_max.select("blue").updateMask(cropland).rename("MBPMFI");
 ////+++ BPMFI = (img_max-img_PMS)*(img_max-img_FS)
 var BPMFI = (img_max.subtract(img_PMS)).multiply(img_max.subtract(img_FS))
             .multiply(ee.Number(100)).select("blue")
-            .updateMask(cropland).rename("PFMI");
+            .updateMask(cropland).rename("BPMFI");
 ////+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 
@@ -77,13 +78,13 @@ var pmf1 = MBPMFI.gte(0.16).eq(1).rename("pmf1");
 var pmf2 = BPMFI.gte(0.40).eq(1).rename("pmf2");
 var pmf = pmf1.add(pmf2).eq(2);
 var pmf = pmf.updateMask(pmf).rename("pmf");
-Map.addLayer(pmf,{palette:["yellow"],min:0,max:1},"pmf",false);
+Map.addLayer(pmf,{palette:["red"],min:0,max:1},"pmf");
 
 var no_pmf1 = MBPMFI.lt(0.16).eq(1).rename("no_pmf1");
 var no_pmf2 = BPMFI.lt(0.40).eq(1).rename("no_pmf2");
 var no_pmf = no_pmf1.add(no_pmf2).eq(2);
 var no_pmf = no_pmf.updateMask(no_pmf).rename("nopmf");
-Map.addLayer(no_pmf,{palette:["#03fff8"],min:0,max:1},"no_pmf",false);
+Map.addLayer(no_pmf,{palette:["#03fff8"],min:0,max:1},"no_pmf");
 
 ////+++ Neighborhood filter.
 var kernel = ee.Kernel.square(1,"pixels",false);
@@ -112,6 +113,7 @@ var pmf_Samples = pmf_Neighbor.sampleRegions({
   geometries:true
 });
 var pmf_Samples = pmf_Samples.filter(ee.Filter.eq("pmfNei",9));
+print("pmf_Samples",pmf_Samples.limit(10));
 
 
 //++no-PMF
@@ -130,6 +132,7 @@ var nopmf_Samples = nopmf_Neighbor.sampleRegions({
   geometries:true
 });
 var nopmf_Samples = nopmf_Samples.filter(ee.Filter.eq("nopmfNei",9));
+print("nopmf_Samples",nopmf_Samples.limit(10));
 ////+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 
@@ -144,5 +147,4 @@ Export.table.toAsset({
   collection: nopmf_Samples,
   description:"nopmf_Samples"
 });
-
 
