@@ -14,18 +14,26 @@ Map.setCenter(108.45329320338335,35.041246339400196)
 
 var pmf = ee.FeatureCollection("users/my-work/LoessPlateau_PFM/GitHub_openAccess/pmf_Samples_HANTS")
             .filterBounds(roi)
-            .select(["peak_green","peak_bsi","peak_dbsi","peak_nmdi","peak_pmli","peak_swir2","peak_gcvi",
-                       "timing_green","timing_bsi","timing_dbsi","timing_nmdi","timing_pmli","timing_swir2","timing_gcvi",
-                       "green_cos","bsi_cos","dbsi_cos","nmdi_cos","pmli_cos","swir2_cos","gcvi_cos",
-                       "green_constant","bsi_constant","dbsi_constant","nmdi_constant","pmli_constant",
-                       "swir2_constant","gcvi_constant",
-                       "landcover"]);
+            .select(["bsi_peak","bsi_cos","bsi_sin2",
+                     "dbsi_peak","dbsi_cos","dbsi_sin2",
+                     "blue_peak","blue_cos","blue_sin2",
+                     "gcvi_peak","gcvi_cos","gcvi_sin2",
+                     "pmli_peak","pmli_cos","pmli_sin2",
+                     "nmdi_peak","nmdi_cos","nmdi_sin2",
+                     "swir2_peak","swir2_cos","swir2_sin2",
+                     "mbpmfi","bpmfi",
+                     "landcover"]);
 var nopmf = ee.FeatureCollection("users/my-work/LoessPlateau_PFM/GitHub_openAccess/nopmf_Samples_HANTS")
               .filterBounds(roi)
-              .select(["green_.*","bsi_.*","dbsi_.*","nmdi_.*","pmli_.*","swir2_.*","gcvi_.*",
-                    "timing_green","timing_bsi","timing_dbsi","timing_nmdi","timing_pmli","timing_swir2","timing_gcvi",
-                    "peak_green","peak_bsi","peak_dbsi","peak_nmdi","peak_pmli","peak_swir2","peak_gcvi",
-                    "landcover"]);
+              .select(["bsi_peak","bsi_cos","bsi_sin2",
+                     "dbsi_peak","dbsi_cos","dbsi_sin2",
+                     "blue_peak","blue_cos","blue_sin2",
+                     "gcvi_peak","gcvi_cos","gcvi_sin2",
+                     "pmli_peak","pmli_cos","pmli_sin2",
+                     "nmdi_peak","nmdi_cos","nmdi_sin2",
+                     "swir2_peak","swir2_cos","swir2_sin2",
+                     "mbpmfi","bpmfi",
+                     "landcover"]);
 
 var training = pmf.merge(nopmf);
 var bandNames = ee.Feature(pmf.first())
@@ -54,7 +62,7 @@ Map.addLayer(cropland.selfMask().clip(roi),{palette:"#d774ff"},"cropland");
 
 
 ////+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-////+++ prepare data.
+////+++ Load Sentinel-2 images.
 var start_date = '2020-03-01';
 var end_date = '2020-11-01';
 var oldBands = ["B2","B3","B4","B8","B11","B12"];
@@ -74,17 +82,18 @@ function maskS2clouds(image) {
   return image.updateMask(mask);
 }
 
-////+++ Function used for calculate VIs.
+
+////+++ Function used for calculate vegetation indices (VIs).
 function VIs(img){
   var gcvi = img.expression("(nir/green)-1",{"nir":img.select("nir"),
-                                          "green":img.select("green")}).rename("gcvi");
+                                           "green":img.select("green")}).rename("gcvi");
   var ndvi = img.normalizedDifference(["nir","red"]).rename("ndvi");
   var lswi = img.normalizedDifference(["nir","swir1"]).rename("lswi");
   var nmdi = img.expression("(nir-swir1+swir2)/(nir+swir1-swir2)",
-                            {"nir":img.select("nir"),
+                             {"nir":img.select("nir"),
                               "swir1":img.select("swir1"),
                               "swir2":img.select("swir2")
-                            }).rename("nmdi");
+                             }).rename("nmdi");
   var bsi = img.expression("(swir2+red-nir+blue)/(swir2+red+nir-blue)",
                             {"swir2":img.select("swir2"),
                               "red":img.select("red"),
@@ -105,16 +114,25 @@ var s2Col = s2Col.map(maskS2clouds)
                 .select(oldBands,newBands)
                 .map(function(img){return img.divide(10000).copyProperties(img,['system:time_start'])})
                 .map(VIs);
+                
+var rgb = s2Col.filterDate("2020-05-15","2020-05-20")
+               .select(["red","green","blue"])
+               .max();
 
-var rgb = ee.ImageCollection("COPERNICUS/S2_SR_HARMONIZED")
-              .filterDate("2020-05-15","2020-05-20")
-              .filterBounds(roi)
-              .map(maskS2clouds)
-              .select(oldBands,newBands)
-              .max().clip(roi);
-Map.addLayer(rgb,{bands:["red","green","blue"],min:-100,max:2400},"rgb");
-Map.addLayer(pmf,{color:"red"},"pmf",false);
-Map.addLayer(nopmf,{color:"blue"},"nopmf",false);
+
+////++++Calculate MBPMFI and BPMFI.
+var median = s2Col.median().select("blue");  ///++roughly fill gaps
+
+var img_PMS = s2Col.filterDate("2020-03-01","2020-04-01").min().select("blue").unmask(median);
+var img_MS =  s2Col.filterDate("2020-05-01","2020-06-01").max().select("blue").unmask(median);
+var img_FS =  s2Col.filterDate("2020-07-01","2020-08-01").min().select("blue").unmask(median);
+
+var mbpmfi = img_MS.rename("mbpmfi");
+var bpmfi = (img_MS.subtract(img_PMS)).multiply(img_MS.subtract(img_FS))
+            .multiply(ee.Number(100)).rename("bpmfi");
+////+++++++++++++++++++++++++++++
+
+
 
 ////+++ Add time band and constant band.
 function addVaribles(img){
@@ -128,6 +146,7 @@ function addVaribles(img){
 var s2Col = s2Col.map(addVaribles);
 // print("s2Col:",s2Col.limit(5));
 ////+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
 
 
 
@@ -287,8 +306,13 @@ var data = blue_coeffi.addBands(green_coeffi).addBands(red_coeffi).addBands(swir
                       .addBands(green_peak).addBands(red_peak).addBands(swir1_peak).addBands(swir2_peak)
                       .addBands(gcvi_peak).addBands(ndvi_peak).addBands(lswi_peak).addBands(nmdi_peak)
                       .addBands(bsi_peak).addBands(dbsi_peak).addBands(pmli_peak).addBands(blue_peak);
+var data = data.addBands([mbpmfi,bpmfi]);
+print("data:",data);
+Map.addLayer(data,{},"data",false);
 
 ////+++ Generate plastic-mulched farmland distribution maps for study area.
+Map.addLayer(rgb,{min:0,max:0.27,band:["red","green","red"]},"rgb");
+
 var classified = data.clip(roi).updateMask(cropland).classify(classifier);
 Map.addLayer(classified.selfMask(),{min:0,max:1,palette:["green","yellow"]},"classified");
 Map.addLayer(cropland.eq(1).selfMask(),{palette:"red"},"cropland",false);
