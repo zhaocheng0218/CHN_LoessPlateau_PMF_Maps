@@ -7,7 +7,8 @@ var roi = ee.Geometry.Polygon(
           [107.46108539811854, 34.55181204743065],
           [108.90853412858729, 34.55181204743065],
           [108.90853412858729, 35.50316484800783]]], null, false);
-Map.addLayer(roi,{color:"red"},"roi",false);
+Map.addLayer(roi,{color:"red"},"roi");
+Map.centerObject(roi);
 
 
 ////+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -271,6 +272,5 @@ Export.table.toAsset({
   collection: nopmfSamples,
   description:"nopmf_Samples_HANTS"
 });
-
 
 
