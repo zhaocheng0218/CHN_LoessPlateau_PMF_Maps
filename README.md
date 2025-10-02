@@ -1,7 +1,7 @@
 # CHN_LoessPlateau_PMF_Maps
 Core codes used to generate the plastic-mulched farmland distribution maps on the Chinese Loess Plateau.
 
-## Relative Dataset:
+## Relative Dataset
 Zhao, C. et al. PMF-LP: the first 10 m plastic-mulched farmland distribution map (2019-2021) in the Loess Plateau of China generated using training sample generation and classifier transfer method. Zenodo https://doi.org/10.5281/zenodo.13369426 (2024)
 ## Tips for Scaling the Code (Handling Computational Constraints)
 * The above code files only select partial areas to demonstrate the method, because when applying the method to larger areas, it will be limited by computing power. 
