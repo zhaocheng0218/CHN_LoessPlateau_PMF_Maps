@@ -263,6 +263,9 @@ var nopmfSamples = data.sampleRegions({
                       geometries:true
                     });
 
+print("pmfSamples",pmfSamples.limit(10));
+print("nopmfSamples",nopmfSamples.limit(10));
+
 Export.table.toAsset({
   collection: pmfSamples,
   description:"pmf_Samples_HANTS"
